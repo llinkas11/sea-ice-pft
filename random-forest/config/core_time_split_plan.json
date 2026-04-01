@@ -1,0 +1,9 @@
+{
+  "generated_utc": "2026-03-30T19:47:23.650919+00:00",
+  "group_column": "year_month",
+  "holdout": "2003",
+  "model_family": "core",
+  "strategy": "grouped temporal split",
+  "training_years": [],
+  "warning": "Do not randomly split rows."
+}

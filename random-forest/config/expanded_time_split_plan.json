@@ -1,0 +1,8 @@
+{
+  "generated_utc": "2026-03-30T19:17:37.230288+00:00",
+  "group_column": "year_month",
+  "holdout": "final full year",
+  "model_family": "expanded",
+  "strategy": "grouped temporal split",
+  "warning": "Do not randomly split rows."
+}

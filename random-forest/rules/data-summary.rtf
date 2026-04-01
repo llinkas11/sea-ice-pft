@@ -1,0 +1,251 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0 Arial;}{\f1 Courier New;}}
+\fs24
+\b Data Summary\b0\par
+For this project, the new core data stack is built around one biological response dataset and three gridded Copernicus Marine predictor products.\par
+\par
+The primary biological response data are the Ardyna et al. Pan-Arctic phytoplankton functional type (PFT) outputs. These are daily 4 km parquet files covering 2003 to 2024, but only for April through August. Each daily file includes latitude, longitude, pixel_class, chlorophyll_guesses, and remote-sensing reflectance bands. The dataset is organized as 22 yearly zip archives, one per year, with about 154 daily files per year except 2022, which has 139 because MODIS-Aqua input data are missing for 1–15 April.\par
+\par
+The environmental predictor stack comes from Copernicus Marine Arctic reanalysis products:\par
+- ARCTIC_MULTIYEAR_PHY_002_003: Arctic Ocean Physics Reanalysis\par
+- ARCTIC_MULTIYEAR_PHY_ICE_002_016: Arctic Ocean Sea Ice Reanalysis\par
+- ARCTIC_MULTIYEAR_BGC_002_005: Arctic Ocean Biogeochemistry Reanalysis\par
+\par
+The physics reanalysis covers the broader study period and provides the main physical ocean predictors. The sea-ice reanalysis provides the core cryospheric predictors. The Arctic biogeochemistry reanalysis provides optional ecological-context predictors for an expanded model, but it covers a shorter interval than the other two products.\par
+\par
+The key implication is that the new data stack is much cleaner and more extensible than the earlier irregular sea-ice CSV workflow. Instead of being limited by a sparse subset of physical months, the project can now be organized around a gridded response dataset and a matched reanalysis predictor stack. That makes the RF analysis more coherent and easier to scale on the Bowdoin HPC.\par
+\par
+\b Variables Available\b0\par
+\b 1. Ardyna et al. PFT satellite dataset (response data)\b0\par
+Core columns in each daily parquet file:\par
+date\par
+year\par
+longitude\par
+latitude\par
+pixel_class\par
+chlorophyll_guesses\par
+rrs_412, rrs_443, rrs_469, rrs_488, rrs_531, rrs_547, rrs_555, rrs_645, rrs_667, rrs_678\par
+\par
+Interpretation:\par
+pixel_class is the natural categorical response for the main RF classification model.\par
+chlorophyll_guesses is the natural continuous response for the secondary RF regression model.\par
+The Rrs bands are not ideal as primary predictors because they are inputs to the PFT algorithm itself; using them would make the RF much less interpretable as a biology-physics linkage analysis.\par
+\par
+\b 2. Copernicus Arctic Physics Reanalysis (core predictor data)\b0\par
+This product provides the physical ocean state over the Arctic and North Atlantic domain. Variables of interest for this project include temperature, salinity, and mixed layer depth, along with other physical descriptors available in the product.\par
+\par
+Interpretation:\par
+This is the main source for water-column environment predictors. It is the best way to add salinity and mixed layer depth as spatially continuous variables.\par
+\par
+\b 3. Copernicus Arctic Sea Ice Reanalysis (core predictor data)\b0\par
+This product provides sea-ice concentration, thickness, velocity, snow depth, sea-ice type, age, ridge fraction, and albedo on an Arctic grid.\par
+\par
+Interpretation:\par
+This is the main source for the sea-ice predictors that are central to the project question. It is a better long-term structural source than relying only on the earlier locally sliced sea-ice CSVs, although those earlier files may still be useful for cross-checking or debugging.\par
+\par
+\b 4. Copernicus Arctic Biogeochemistry Reanalysis (expanded predictor data)\b0\par
+This product provides gridded Arctic biogeochemical fields such as chlorophyll, nutrients, oxygen, primary productivity, and phytoplankton carbon.\par
+\par
+Interpretation:\par
+This is useful as an expanded ecological-context predictor dataset, but it should not be the first thing the model depends on. Some of its variables overlap conceptually with what the PFT response already describes, so including them in the main RF would make interpretation less clean. It is better suited for a secondary expanded model.\par
+\par
+\b Spatial and Temporal Coverage\b0\par
+\b Ardyna PFT product\b0\par
+Temporal coverage: 2003 to 2024\par
+Temporal resolution: daily\par
+Seasonal coverage: April to August only\par
+Spatial resolution: 4 km\par
+Coverage: Pan-Arctic\par
+\par
+\b Copernicus Arctic Physics Reanalysis\b0\par
+Temporal coverage: broader study-period coverage for the RF workflow\par
+Temporal resolution: daily and monthly\par
+Variables emphasized here: temperature, salinity, mixed layer depth\par
+\par
+\b Copernicus Arctic Sea Ice Reanalysis\b0\par
+Temporal coverage: broader study-period coverage for the RF workflow\par
+Temporal resolution: daily and monthly\par
+Variables emphasized here: sea-ice concentration and thickness\par
+\par
+\b Copernicus Arctic Biogeochemistry Reanalysis\b0\par
+Temporal coverage: shorter than the physics and sea-ice products\par
+Temporal resolution: daily, monthly, yearly\par
+Variables emphasized here: chlorophyll, nitrate, phosphate, silicate, oxygen, primary productivity, phytoplankton carbon\par
+\par
+\b Cross-Dataset Temporal Overlap (Critical for RF Design)\b0\par
+The crucial issue is not whether each dataset is large on its own, but what time window exists when they can actually be matched.\par
+\par
+If the model uses:\par
+Ardyna PFT + Copernicus Physics + Copernicus Sea Ice\par
+then the common matched window is April to August 2003 to 2024.\par
+\par
+If the model uses:\par
+Ardyna PFT + Copernicus Physics + Copernicus Sea Ice + Copernicus BGC\par
+then the common matched window is shorter and should be treated as a secondary analysis window.\par
+\par
+Interpretation:\par
+This naturally suggests a partitioned design.\par
+The main model should use the longer window with PFT + Physics + Sea Ice.\par
+The expanded model should use the shorter window with PFT + Physics + Sea Ice + BGC.\par
+\par
+\b Missingness and Practical Constraints\b0\par
+The older sea-ice CSV workflow had substantial variable-specific missingness, especially for thickness and albedo. The new Copernicus reanalysis products reduce that problem because they are designed as continuous gridded products, but they introduce new practical constraints:\par
+\par
+1. The PFT data only exist from April to August.\par
+2. The PFT algorithm was calibrated for the Labrador and Barents Seas, so performance elsewhere in the Arctic should be interpreted cautiously.\par
+3. The products are on different grids and resolutions, so all datasets need to be regridded or matched onto a common target grid.\par
+4. The Arctic BGC product covers a shorter interval than the physics and sea-ice products, so any model using it loses some temporal span.\par
+5. Some BGC variables overlap conceptually with the biological response, which can weaken interpretation if used too aggressively.\par
+\par
+\b What This Means for Random Forest Design\b0\par
+The project is best thought of as a biology-physics linkage problem.\par
+\par
+Recommended response variables:\par
+Primary response: pixel_class (classification RF)\par
+Secondary response: chlorophyll_guesses (regression RF)\par
+\par
+Recommended core predictors:\par
+Sea-ice concentration\par
+Sea-ice thickness\par
+Temperature\par
+Salinity\par
+Mixed layer depth\par
+Latitude\par
+Longitude\par
+Month\par
+Year\par
+\par
+Recommended expanded predictors:\par
+Selected Arctic BGC variables such as nutrients, oxygen, primary productivity, or chlorophyll-related context fields\par
+\par
+Important design interpretation:\par
+The first RF should be simple and interpretable: PFT response explained by sea ice plus physical ocean state.\par
+The second RF can test whether adding BGC context changes variable importance or predictive skill.\par
+\par
+\b Recommended Partitioned Analysis Plan\b0\par
+\b Model family 1: Main model (longest clean window)\b0\par
+Response: Ardyna PFT pixel_class or chlorophyll_guesses\par
+Predictors: Copernicus Physics + Copernicus Sea Ice\par
+Time range: April to August, 2003 to 2024\par
+Use: Primary scientific analysis\par
+\par
+\b Model family 2: Expanded model (shorter but richer predictor set)\b0\par
+Response: Ardyna PFT pixel_class or chlorophyll_guesses\par
+Predictors: Copernicus Physics + Copernicus Sea Ice + Copernicus BGC\par
+Time range: shorter matched window determined by BGC availability\par
+Use: Robustness and interpretation check\par
+\par
+\b Good Train/Test Strategy\b0\par
+Do not randomly split rows.\par
+Use temporal blocking and, if possible, spatial blocking.\par
+\par
+For the main model:\par
+Train: earlier years\par
+Test: later years\par
+A natural simple split is train on 2003 to 2021 and test on 2022 to 2024, or train on 2003 to 2020 and test on 2021 to 2024.\par
+\par
+For the expanded model:\par
+Train on earlier years within the shorter common window\par
+Test on later years within that same shorter window\par
+\par
+Use grouped cross-validation by year-month to avoid leakage from temporal autocorrelation.\par
+If possible, add a spatial-block check so the RF is not just memorizing geography.\par
+\par
+\b Python Download Workflow for Labrador and Barents Seas\b0\par
+Below is the Python code structure to download the Arctic datasets for the Labrador and Barents Seas using the Copernicus Marine toolbox.\par
+\par
+{\f1
+import copernicusmarine\par
+from datetime import datetime\par
+\par
+labrador_sea = \{\par
+    "min_lon": -65.0, "max_lon": -45.0,\par
+    "min_lat": 55.0, "max_lat": 70.0\par
+\}\par
+\par
+barents_sea = \{\par
+    "min_lon": 15.0, "max_lon": 60.0,\par
+    "min_lat": 70.0, "max_lat": 82.0\par
+\}\par
+\par
+datasets = \{\par
+    "physics": "cmems_mod_arc_phy_my_topaz4_P1D-m",\par
+    "biogeochemistry": "cmems_mod_arc_bgc_my_ecosmo_P1D-m",\par
+    "sea_ice": "cmems_mod_arc_phy_my_nextsim_P1D-m"\par
+\}\par
+\par
+variables = \{\par
+    "physics": ["thetao", "so", "mlotst"],\par
+    "biogeochemistry": ["chl", "no3", "po4", "si", "o2", "nppv", "phyc"],\par
+    "sea_ice": ["siconc", "sithick"]\par
+\}\par
+\par
+def download_arctic_data(region_name, bbox, start_year=2003, end_year=2024):\par
+    for data_type, dataset_id in datasets.items():\par
+        print(f"Downloading \{data_type\} data for \{region_name\}...")\par
+\par
+        copernicusmarine.subset(\par
+            dataset_id=dataset_id,\par
+            minimum_longitude=bbox["min_lon"],\par
+            maximum_longitude=bbox["max_lon"],\par
+            minimum_latitude=bbox["min_lat"],\par
+            maximum_latitude=bbox["max_lat"],\par
+            start_datetime=f"\{start_year\}-01-01",\par
+            end_datetime=f"\{end_year\}-12-31",\par
+            variables=variables[data_type],\par
+            output_directory=f"./arctic_data/\{region_name\}/\{data_type\}/"\par
+        )\par
+\par
+download_arctic_data("labrador_sea", labrador_sea)\par
+download_arctic_data("barents_sea", barents_sea)\par
+\par
+print("Download completed for both regions!")\par
+}
+\par
+Interpretation:\par
+This code provides a direct programmatic workflow for acquiring the core Arctic predictors for the two regions where the PFT algorithm is best grounded: the Labrador Sea and the Barents Sea.\par
+The directory structure also makes it straightforward to store the raw Copernicus downloads on Bowdoin HPC in a clean region-by-product hierarchy.\par
+\par
+\b Key Arctic Products Used\b0\par
+- ARCTIC_MULTIYEAR_PHY_002_003: Arctic physics reanalysis with temperature, salinity, and mixed layer depth\par
+- ARCTIC_MULTIYEAR_BGC_002_005: Arctic biogeochemistry reanalysis with chlorophyll, nutrients, and primary productivity\par
+- ARCTIC_MULTIYEAR_PHY_ICE_002_016: Arctic sea ice reanalysis\par
+\par
+\b Monthly Data Option (Smaller Files)\b0\par
+If file size or processing speed becomes a bottleneck, monthly products are a practical alternative.\par
+\par
+{\f1
+monthly_datasets = \{\par
+    "physics": "cmems_mod_arc_phy_my_topaz4_P1M",\par
+    "biogeochemistry": "cmems_mod_arc_bgc_my_ecosmo_P1M"\par
+\}\par
+}
+\par
+Interpretation:\par
+Monthly data are much easier to handle for a first-pass RF workflow, especially when the final modeling table will likely be aggregated by month anyway. Daily products are more detailed, but monthly products are often the more efficient choice for initial matching, model building, and debugging.\par
+\par
+\b What Data Should Actually Be Stored and Processed on the Bowdoin HPC\b0\par
+All bulk data and intermediate products should live on Bowdoin HPC storage rather than local machines.\par
+That includes:\par
+raw yearly PFT zip/parquet files\par
+downloaded Copernicus NetCDF subsets\par
+intermediate regridded monthly tables\par
+final model-ready parquet tables\par
+trained model objects\par
+figures and diagnostics\par
+\par
+Recommended workflow interpretation:\par
+Use the GitHub RF template as the structural starting point, but run the actual data preparation, matching, training, and interpretation on Moosehead or Dover.\par
+Dover via Jupyter is a strong choice for exploratory data preparation and notebook work.\par
+Moosehead is appropriate for heavier scripted RF fitting and Slurm-based batch jobs.\par
+\par
+\b Bottom Line\b0\par
+For the new data stack, the cleanest project design is:\par
+1. Treat Ardyna PFT as the main biological response dataset.\par
+2. Treat Copernicus Arctic Physics and Arctic Sea Ice reanalyses as the core predictor stack.\par
+3. Treat Copernicus Arctic Biogeochemistry as a secondary expanded predictor stack, not the main starting point.\par
+4. Build two model families: a long-window main model and a shorter richer expanded model.\par
+5. Store and process the bulk of the data and model products on Bowdoin HPC.\par
+\par
+This design gives the best balance of interpretability, time coverage, and scientific defensibility for the random forest analysis.\par
+}

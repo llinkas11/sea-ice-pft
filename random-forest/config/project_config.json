@@ -1,0 +1,19 @@
+{
+  "created_utc": "2026-03-30T19:17:36.857656+00:00",
+  "model_families": [
+    "core",
+    "expanded"
+  ],
+  "notes": [
+    "Core model uses PFT + physics + sea ice predictors.",
+    "Expanded model adds biogeochemistry predictors.",
+    "In-situ data are for external validation only.",
+    "Train/test splits must be time-blocked."
+  ],
+  "project_name": "Northeast Arctic sea ice and PFT random forest",
+  "region": "70N-90N, 25W-35E",
+  "targets": [
+    "pixel_class",
+    "chlorophyll_guesses"
+  ]
+}
