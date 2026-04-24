@@ -1,0 +1,15 @@
+name: sea-ice-pft
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pandas
+  - numpy
+  - xarray
+  - scipy
+  - scikit-learn
+  - pyarrow
+  - netcdf4
+  - pip
+  - pip:
+      - copernicusmarine

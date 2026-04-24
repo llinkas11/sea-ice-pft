@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+title: "Arctic PFT Random-Forest: Fram Strait sea-ice export and phytoplankton"
+message: "If you use this software or the companion data, please cite the Zenodo archive."
+type: software
+authors:
+  - family-names: Linkas
+    given-names: Lucas
+    email: llinkas@bowdoin.edu
+version: 1.0.0
+date-released: "2026-04-24"
+license: MIT
+repository-code: "https://github.com/llinkas11/sea-ice-pft"
+doi: "10.5281/zenodo.PLACEHOLDER"
