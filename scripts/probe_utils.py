@@ -14,6 +14,9 @@ __all__ = [
     "PQ_PATH", "DATA_MODEL_DIR", "RESULTS_DIR", "SCRIPTS_DIR",
     "PFT_VARS", "ICE_VARS", "OCEAN_VARS", "ATM_VARS", "SPATIAL_VARS",
     "PHASE1_FILTER_COLS",
+    "PFT_DISPLAY", "PFT_COLORS",
+    "P3_OCEAN_VARS", "P3_LOCAL_ICE_VARS", "P3_EXPORT_VARS",
+    "P3_ATM_VARS", "P3_SPATIAL_VARS", "P3_ALL_VARS",
     "PartialCorrResult",
     "load_matchup_phase1", "add_monthly_lags", "add_climatology_anomaly",
     "partial_corr", "mediation_pct",
@@ -36,6 +39,28 @@ ATM_VARS     = ['era5_qnet_ocean_loss_wm2', 'era5_u10_ms', 'era5_v10_ms']
 SPATIAL_VARS = ['latitude', 'longitude']
 
 PHASE1_FILTER_COLS = PFT_VARS + ICE_VARS + OCEAN_VARS + ATM_VARS + SPATIAL_VARS
+
+# Display labels and colors — mirror R/rf_utils.R::PFT_COLORS to prevent drift across languages.
+PFT_DISPLAY = ["Coccolithophores", "Diatoms", "Phaeocystis"]
+PFT_COLORS = {
+    "Coccolithophores": "#E69F00",
+    "Diatoms":          "#56B4E9",
+    "Phaeocystis":      "#009E73",
+}
+
+# Phase-3 feature blocks (rename-applied names; mirror R/rf_utils.R::P3_*_VARS).
+P3_OCEAN_VARS     = ["thetao", "so", "mlotst"]
+P3_LOCAL_ICE_VARS = ["siconc", "sithick", "siconc_lag1", "sithick_lag1"]
+P3_EXPORT_VARS    = [
+    "ice_area_flux_current",   "ice_area_flux_lag1",
+    "ice_area_flux_lag2",      "ice_area_flux_cumOct",
+    "ice_volume_flux_current", "ice_volume_flux_lag1",
+    "ice_volume_flux_lag2",    "ice_volume_flux_cumOct",
+]
+P3_ATM_VARS       = ["qnet_wm2", "u10_ms", "v10_ms"]
+P3_SPATIAL_VARS   = ["latitude", "longitude"]
+P3_ALL_VARS       = P3_OCEAN_VARS + P3_LOCAL_ICE_VARS + P3_EXPORT_VARS + P3_ATM_VARS + P3_SPATIAL_VARS
+assert len(P3_ALL_VARS) == 20  # 3+4+8+3+2; mirrors R/rf_utils.R load-time invariant.
 
 
 class PartialCorrResult(NamedTuple):
