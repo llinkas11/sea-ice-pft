@@ -17,6 +17,7 @@ __all__ = [
     "PFT_DISPLAY", "PFT_COLORS",
     "P3_OCEAN_VARS", "P3_LOCAL_ICE_VARS", "P3_EXPORT_VARS",
     "P3_ATM_VARS", "P3_SPATIAL_VARS", "P3_ALL_VARS",
+    "ERA5_RENAME",
     "PartialCorrResult",
     "load_matchup_phase1", "add_monthly_lags", "add_climatology_anomaly",
     "partial_corr", "mediation_pct",
@@ -41,11 +42,21 @@ SPATIAL_VARS = ['latitude', 'longitude']
 PHASE1_FILTER_COLS = PFT_VARS + ICE_VARS + OCEAN_VARS + ATM_VARS + SPATIAL_VARS
 
 # Display labels and colors — mirror R/rf_utils.R::PFT_COLORS to prevent drift across languages.
-PFT_DISPLAY = ["Coccolithophores", "Diatoms", "Phaeocystis"]
 PFT_COLORS = {
     "Coccolithophores": "#E69F00",
     "Diatoms":          "#56B4E9",
     "Phaeocystis":      "#009E73",
+}
+PFT_DISPLAY = list(PFT_COLORS)  # source-of-truth ordering for figures, derived from PFT_COLORS
+
+# ERA5 column rename — mirror R/rf_utils.R::.ERA5_RENAME_MAP (both qnet variants
+# fall back to qnet_wm2 so the schema-drift case where the parquet ships
+# era5_qnet_downward_wm2 instead of era5_qnet_ocean_loss_wm2 is handled).
+ERA5_RENAME = {
+    "era5_qnet_ocean_loss_wm2": "qnet_wm2",
+    "era5_qnet_downward_wm2":   "qnet_wm2",
+    "era5_u10_ms":              "u10_ms",
+    "era5_v10_ms":              "v10_ms",
 }
 
 # Phase-3 feature blocks (rename-applied names; mirror R/rf_utils.R::P3_*_VARS).

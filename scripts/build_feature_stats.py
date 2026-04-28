@@ -15,19 +15,11 @@ sys.path.insert(0, os.environ.get("RF_PROJECT_ROOT", os.getcwd()))
 from config import rf_data_root, rf_out_root  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from probe_utils import P3_ALL_VARS  # noqa: E402
+from probe_utils import P3_ALL_VARS, ERA5_RENAME  # noqa: E402
 
 PQ  = rf_data_root() / "final-spatial-matchup-p3.parquet"
 OUT = rf_out_root() / "results" / "p3_full_feature_stats.csv"
 OUT.parent.mkdir(parents=True, exist_ok=True)
-
-# Same ERA5 rename the R training pipeline applies — keep column names
-# aligned with R/rf_utils.R::P3_ALL_VARS / probe_utils.P3_ALL_VARS.
-ERA5_RENAME = {
-    "era5_qnet_ocean_loss_wm2": "qnet_wm2",
-    "era5_u10_ms":              "u10_ms",
-    "era5_v10_ms":              "v10_ms",
-}
 
 df = pd.read_parquet(PQ).rename(columns=ERA5_RENAME)
 print(f"Read {len(df):,} rows × {df.shape[1]} cols")

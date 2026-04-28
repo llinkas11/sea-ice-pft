@@ -36,7 +36,6 @@ from probe_utils import PFT_COLORS, PFT_DISPLAY  # noqa: E402
 
 RESULTS = rf_out_root() / "results"
 FIGURES = rf_out_root() / "figures"
-FIGURES.mkdir(parents=True, exist_ok=True)
 
 ALE_CSV   = RESULTS / "p3_ale_aggregated.csv"
 STATS_CSV = RESULTS / "p3_full_feature_stats.csv"
@@ -71,9 +70,10 @@ def build_figure(layout, agg, stats, title, out_path):
     for r, c, label, feat, xunit, desc in layout:
         ax = axes[r, c]
         if feat not in stats.index:
-            ax.text(0.5, 0.5, f"feature {feat} not found",
-                    ha='center', va='center', transform=ax.transAxes, color='red')
-            continue
+            raise KeyError(
+                f"Feature {feat!r} missing from feature-stats CSV — "
+                f"re-run build_feature_stats.py before this script."
+            )
         mu, sd = stats.loc[feat, "mean"], stats.loc[feat, "sd"]
         for pft in PFT_DISPLAY:
             sub = agg[(agg["pft"] == pft) & (agg["feature"] == feat)].sort_values("x")
@@ -112,6 +112,7 @@ def main():
     if not STATS_CSV.exists():
         sys.exit(f"ERROR: feature stats CSV not found at {STATS_CSV} — run build_feature_stats.py first.")
 
+    FIGURES.mkdir(parents=True, exist_ok=True)
     agg = pd.read_csv(ALE_CSV)
     stats = pd.read_csv(STATS_CSV).set_index("feature")
     print(f"Loaded {len(agg)} aggregated ALE rows; {len(stats)} feature stats")
